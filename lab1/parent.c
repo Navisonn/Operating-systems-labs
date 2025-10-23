@@ -48,7 +48,7 @@ int main() {
         close(pipe2[0]);
         close(pipe2[1]);
         char fd_str[10];
-        sprintf(fd_str, "%d", pipe1[0]);
+        snprintf(fd_str, sizeof(fd_str), "%d", pipe1[0]);
         execl("./child", "child", file1, fd_str, (char *)NULL);
         perror("execl child1");
         exit(1);
@@ -67,7 +67,7 @@ int main() {
         close(pipe1[0]);
         close(pipe1[1]);
         char fd_str[10];
-        sprintf(fd_str, "%d", pipe2[0]);
+        snprintf(fd_str, sizeof(fd_str), "%d", pipe2[0]);
         execl("./child", "child", file2, fd_str, (char *)NULL);
         perror("execl child2");
         exit(1);
