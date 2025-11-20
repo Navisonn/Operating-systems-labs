@@ -54,10 +54,13 @@ void* sortThread(void *arg) {
 void parallelBitonicSort(int *arr, int n, int dir) {
     int N = 1;
     while (N < n) N <<= 1;
-    printf("Исходный размер: %d, Приведен к: %d\n", n, N);
+    char buffer[100];
+    snprintf(buffer, sizeof(buffer), "Исходный размер: %d, Приведен к: %d\n", n, N);
+    write(STDOUT_FILENO, buffer, strlen(buffer));
+    
     int *temp = malloc(N * sizeof(int));
     if (!temp) {
-        printf("err\n");
+        write(STDOUT_FILENO, "err\n", 4);
         return;
     }
     memcpy(temp, arr, n * sizeof(int));
@@ -74,23 +77,25 @@ void parallelBitonicSort(int *arr, int n, int dir) {
         if (block_size > N / 2) block_size = N / 2;
         pthread_t *threads = malloc(MAX_THREADS * sizeof(pthread_t));
         if (!threads) {
-            printf("err\n");
+            write(STDOUT_FILENO, "err\n", 4);
             free(temp);
             return;
         }
         for (int i = 0; i < MAX_THREADS; i++) {
             SortTask *task = malloc(sizeof(SortTask));
             if (!task) {
-                printf("err\n");
+                write(STDOUT_FILENO, "err\n", 4);
                 continue;
             }
             task->array = temp;
             task->low = i * block_size;
             task->cnt = (i == MAX_THREADS - 1) ? (N - i * block_size) : block_size;
-            task->dir = (i % 2 == 0) ? dir : !dir; 
+            task->dir = (i % 2 == 0) ? dir : !dir;
             
             if (pthread_create(&threads[i], NULL, sortThread, task) != 0) {
-                printf("err %d\n", i);
+                char err_msg[20];
+                snprintf(err_msg, sizeof(err_msg), "err %d\n", i);
+                write(STDOUT_FILENO, err_msg, strlen(err_msg));
                 free(task);
             }
         }
@@ -128,8 +133,10 @@ void parallelBitonicSort(int *arr, int n, int dir) {
 int isSorted(int *arr, int n) {
     for (int i = 1; i < n; i++) {
         if (arr[i] < arr[i - 1]) {
-            printf("err %d-%d: %d > %d\n", 
-                   i-1, i, arr[i-1], arr[i]);
+            char buffer[50];
+            snprintf(buffer, sizeof(buffer), "err %d-%d: %d > %d\n", 
+                     i-1, i, arr[i-1], arr[i]);
+            write(STDOUT_FILENO, buffer, strlen(buffer));
             return 0;
         }
     }
@@ -137,79 +144,104 @@ int isSorted(int *arr, int n) {
 }
 
 void testWithSmallArray() {
-    printf("\n=== ТЕСТ НА МАЛЕНЬКОМ МАССИВЕ ===\n");
+    write(STDOUT_FILENO, "\n=== ТЕСТ НА МАЛЕНЬКОМ МАССИВЕ ===\n", 37);
     int test_arr[] = {3, 7, 4, 8, 6, 2, 1, 5};
     int test_size = 8;
-    printf("Исходный массив: ");
-    for (int i = 0; i < test_size; i++) printf("%d ", test_arr[i]);
-    printf("\n");
+    write(STDOUT_FILENO, "Исходный массив: ", 18);
+    for (int i = 0; i < test_size; i++) {
+        char num[12];
+        snprintf(num, sizeof(num), "%d ", test_arr[i]);
+        write(STDOUT_FILENO, num, strlen(num));
+    }
+    write(STDOUT_FILENO, "\n", 1);
     parallelBitonicSort(test_arr, test_size, 1);
-    printf("Отсортированный массив: ");
-    for (int i = 0; i < test_size; i++) printf("%d ", test_arr[i]);
-    printf("\n");
+    write(STDOUT_FILENO, "Отсортированный массив: ", 24);
+    for (int i = 0; i < test_size; i++) {
+        char num[12];
+        snprintf(num, sizeof(num), "%d ", test_arr[i]);
+        write(STDOUT_FILENO, num, strlen(num));
+    }
+    write(STDOUT_FILENO, "\n", 1);
     if (isSorted(test_arr, test_size)) {
-        printf("Тест пройден\n");
+        write(STDOUT_FILENO, "Тест пройден\n", 13);
     } else {
-        printf("Тест не пройден\n");
+        write(STDOUT_FILENO, "Тест не пройден\n", 16);
     }
 }
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        printf("Использование: %s <количество_потоков> <размер_массива>\n", argv[0]);
-        printf("Пример: %s 4 100000\n", argv[0]);
+        char usage_msg[100];
+        snprintf(usage_msg, sizeof(usage_msg), 
+                "Использование: %s <количество_потоков> <размер_массива>\n", 
+                argv[0]);
+        write(STDOUT_FILENO, usage_msg, strlen(usage_msg));
+        write(STDOUT_FILENO, "Пример: ", 8);
+        write(STDOUT_FILENO, argv[0], strlen(argv[0]));
+        write(STDOUT_FILENO, " 4 100000\n", 10);
         testWithSmallArray();
         return 1;
     }
     MAX_THREADS = atoi(argv[1]);
     int n = atoi(argv[2]);
     if (MAX_THREADS < 1 || n < 1) {
-        printf("err\n");
+        write(STDOUT_FILENO, "err\n", 4);
         return 1;
     }
     int *arr = malloc(n * sizeof(int));
     if (!arr) {
-        printf("err\n");
+        write(STDOUT_FILENO, "err\n", 4);
         return 1;
     }
     srand(time(NULL));
     for (int i = 0; i < n; i++) {
         arr[i] = rand() % 1000000;
     }
-    printf("Сортировка %d, потоков: %d\n", n, MAX_THREADS);
-    printf("PID: %d\n", getpid());
-    printf("Первые 10: ");
+    char info[100];
+    snprintf(info, sizeof(info), "Сортировка %d, потоков: %d\n", n, MAX_THREADS);
+    write(STDOUT_FILENO, info, strlen(info));
+    snprintf(info, sizeof(info), "PID: %d\n", getpid());
+    write(STDOUT_FILENO, info, strlen(info));
+    write(STDOUT_FILENO, "Первые 10: ", 11);
     for (int i = 0; i < 10 && i < n; i++) {
-        printf("%d ", arr[i]);
+        char num[12];
+        snprintf(num, sizeof(num), "%d ", arr[i]);
+        write(STDOUT_FILENO, num, strlen(num));
     }
-    printf("\n");
+    write(STDOUT_FILENO, "\n", 1);
     clock_t start = clock();
     parallelBitonicSort(arr, n, 1);
     clock_t end = clock();
     double time_taken = ((double)(end - start)) / CLOCKS_PER_SEC;
-    printf("Время: %.4f \n", time_taken);
-    printf("Первые 10: ");
+    char time_msg[50];
+    snprintf(time_msg, sizeof(time_msg), "Время: %.4f \n", time_taken);
+    write(STDOUT_FILENO, time_msg, strlen(time_msg));
+    write(STDOUT_FILENO, "Первые 10: ", 11);
     for (int i = 0; i < 10 && i < n; i++) {
-        printf("%d ", arr[i]);
+        char num[12];
+        snprintf(num, sizeof(num), "%d ", arr[i]);
+        write(STDOUT_FILENO, num, strlen(num));
     }
-    printf("\n");
+    write(STDOUT_FILENO, "\n", 1);
     if (isSorted(arr, n)) {
-        printf("Массив отсортирован\n");
+        write(STDOUT_FILENO, "Массив отсортирован\n", 20);
     } else {
-        printf("Ошибка\n");
+        write(STDOUT_FILENO, "Ошибка\n", 7);
     }
-    printf("\nИССЛЕДОВАНИЕ ПРОИЗВОДИТЕЛЬНОСТИ\n");
+    write(STDOUT_FILENO, "\nИССЛЕДОВАНИЕ ПРОИЗВОДИТЕЛЬНОСТИ\n", 35);
     
     int sizes[] = {1000, 10000, 100000, 1000000};
     int num_sizes = 4;
     
     for (int threads = 1; threads <= 8; threads *= 2) {
-        printf("\n--- %d поток(ов) ---\n", threads);
+        char thread_msg[50];
+        snprintf(thread_msg, sizeof(thread_msg), "\n--- %d поток(ов) ---\n", threads);
+        write(STDOUT_FILENO, thread_msg, strlen(thread_msg));
         
         for (int s = 0; s < num_sizes; s++) {
             int n = sizes[s];
             int *arr = malloc(n * sizeof(int));
-            srand(42); 
+            srand(42);
             for (int i = 0; i < n; i++) {
                 arr[i] = rand() % 1000000;
             }
@@ -229,8 +261,11 @@ int main(int argc, char *argv[]) {
                 }
             }
             
-            printf("Размер: %d, Время: %.4f сек, Корректность: %s\n", 
-                   n, time_taken, sorted ? "Да" : "Нет");
+            char result[100];
+            snprintf(result, sizeof(result), 
+                    "Размер: %d, Время: %.4f сек, Корректность: %s\n", 
+                    n, time_taken, sorted ? "Да" : "Нет");
+            write(STDOUT_FILENO, result, strlen(result));
             
             free(arr);
         }
@@ -238,5 +273,4 @@ int main(int argc, char *argv[]) {
 
     free(arr);
     return 0;
-
 }
